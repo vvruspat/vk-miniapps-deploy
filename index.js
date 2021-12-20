@@ -9,13 +9,12 @@ const Configstore = require('configstore');
 const glob = require('glob');
 const vault = new Configstore(packageJson.name, {});
 
-var configJSON = require('require-module')('./vk-hosting-config.json');
-var cfg = configJSON || {};
+var cfg = {};
 prompt.message = "vk-mini-apps-deploy".grey;
 prompt.delimiter = "=>".grey;
 
-const API_HOST = cfg.api_host || 'https://api.vk.com/method/';
-const OAUTH_HOST = cfg.oauth_host || 'https://oauth.vk.com/';
+var apiHost = 'https://api.vk.com/method/';
+var oauthHost = 'https://oauth.vk.com/';
 
 const API_VERSION = '5.131';
 const DEPLOY_APP_ID = 6670517;
@@ -42,7 +41,7 @@ const URL_NAMES = {
   WEB: 'iframe_secure_url',
   MOBILE: 'm_iframe_secure_url',
   MOBILE_WEB: 'vk_mini_app_mvk_url',
-}
+};
 
 const PLATFORMS = {
   WEB: 'vk.com',
@@ -61,7 +60,7 @@ const URL_NAMES_MAP = {
 };
 
 async function auth() {
-  const get_auth_code = await fetch(OAUTH_HOST + 'get_auth_code?scope=offline&client_id=' + DEPLOY_APP_ID);
+  const get_auth_code = await fetch(oauthHost + 'get_auth_code?scope=offline&client_id=' + DEPLOY_APP_ID);
   const get_auth_code_res = await get_auth_code.json();
 
   if (get_auth_code_res.error !== void 0) {
@@ -76,7 +75,7 @@ async function auth() {
   if (get_auth_code_res.auth_code) {
     const {auth_code, device_id} = get_auth_code_res;
 
-    const url = OAUTH_HOST + 'code_auth?stage=check&code=' + auth_code;
+    const url = oauthHost + 'code_auth?stage=check&code=' + auth_code;
 
     let handled = false;
     do {
@@ -91,7 +90,7 @@ async function auth() {
         return Promise.reject("empty response " + prompt_question.result);
       }
 
-      const code_auth_token = await fetch(OAUTH_HOST + 'code_auth_token?device_id=' + device_id + '&client_id=' + DEPLOY_APP_ID);
+      const code_auth_token = await fetch(oauthHost + 'code_auth_token?device_id=' + device_id + '&client_id=' + DEPLOY_APP_ID);
       const code_auth_token_json = await code_auth_token.json();
 
       if (code_auth_token.status !== CODE_SUCCESS) {
@@ -122,7 +121,7 @@ async function api(method, params) {
 
   const queryParams = Object.keys(params).map((k) => { return k + "=" + encodeURIComponent(params[k]) }).join('&');
   try {
-    const query = await fetch(API_HOST + method + '?' + queryParams);
+    const query = await fetch(apiHost + method + '?' + queryParams);
     const res = await query.json();
     if (res.error !== void 0) {
       throw new Error(chalk.red(res.error.error_code + ': ' + res.error.error_msg));
@@ -280,8 +279,12 @@ async function getQueue(version) {
   return handleQueue(r.app_id, r.base_url, r.key, r.ts, version, false);
 }
 
-async function run(cfg) {
-
+async function run(cfgLocal) {
+  configJSON = cfgLocal || require('require-module')('./vk-hosting-config.json');
+  cfg = { ...cfg, ...cfgLocal, };
+  apiHost = cfg.api_host || 'https://api.vk.com/method/';
+  oauthHost = cfg.oauth_host || 'https://oauth.vk.com/';
+  
   if (!configJSON) {
     throw new Error('For deploy you need to create config file "vk-hosting-config.json"');
   }

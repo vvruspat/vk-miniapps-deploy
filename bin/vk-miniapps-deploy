@@ -1,16 +1,26 @@
 #!/usr/bin/env node
 var chalk = require('chalk');
 const fs = require('fs-extra');
-const configFilePath = './vk-hosting-config.json';
 const prompt = require('prompts');
+let configFilePath = './vk-hosting-config.json';
 
 async function run() {
+  process.argv.forEach(function (val, index, array) {
+    if (val.includes('--config')) {
+      const [param, value] = val.split('=');
+
+      configFilePath = `./${value}`;
+    }
+  });
+
   if (fs.pathExists(configFilePath).then((res) => {
     if (!res) {
       console.error(configFilePath + ' is missing');
       return false;
     }
   })) ;
+
+  console.log(`Loading ${configFilePath}`);
 
   const configJSON = require('require-module')(configFilePath);
   if (!configJSON) {
@@ -22,7 +32,7 @@ async function run() {
   const cfg = configJSON || {};
 
   if (!cfg) {
-    console.error('vk-hosting-config.json is missing');
+    console.error(`${configFilePath} is missing`);
     return false;
   }
 
